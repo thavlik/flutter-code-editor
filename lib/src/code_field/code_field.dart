@@ -244,6 +244,8 @@ class _CodeFieldState extends State<CodeField> {
       widget.lineNumbers ?? widget.gutterStyle.showLineNumbers;
   bool get _popupEnabled =>
       widget.controller.popupController.shouldShow && windowSize != null;
+  bool get _foldingEnabled =>
+      widget.gutterStyle.showFoldingHandles;
   Timer? _lineNumberDebouncer;
   Timer? _popupDebouncer;
   int debounceTimeMillis = 300;
@@ -292,10 +294,12 @@ class _CodeFieldState extends State<CodeField> {
     widget.controller.searchController.codeFieldFocusNode = null;
     if (_lineNumbersEnabled) {
       widget.controller.removeListener(_onTextChanged);
+      _lineNumberDebouncer?.cancel();
     }
     if (_popupEnabled) {
       widget.controller.removeListener(_updatePopupOffset);
       widget.controller.popupController.removeListener(_onPopupStateChanged);
+      _popupDebouncer?.cancel();
     }
 
     _suggestionsPopup?.remove();
@@ -355,33 +359,37 @@ class _CodeFieldState extends State<CodeField> {
 
   void _onTextChanged() {
     _lineNumberDebouncer?.cancel();
-    _lineNumberDebouncer = Timer(Duration(milliseconds: debounceTimeMillis), () {
-      // Rebuild line number
-      final str = widget.controller.text.split('\n');
-      final buf = <String>[];
+    if (!_lineNumbersEnabled) {
+      _lineNumberDebouncer =
+          Timer(Duration(milliseconds: debounceTimeMillis), () {
+            // Rebuild line number
+            final str = widget.controller.text.split('\n');
+            final buf = <String>[];
 
-      for (var k = 0; k < str.length; k++) {
-        buf.add((k + 1).toString());
-      }
+            for (var k = 0; k < str.length; k++) {
+              buf.add((k + 1).toString());
+            }
 
-      // Find longest line
-      longestLine = '';
-      widget.controller.text.split('\n').forEach((line) {
-        if (line.length > longestLine.length) longestLine = line;
-      });
+            // Find longest line
+            longestLine = '';
+            widget.controller.text.split('\n').forEach((line) {
+              if (line.length > longestLine.length) longestLine = line;
+            });
 
-      if (_codeScroll != null && _editorKey.currentContext != null) {
-        final box = _editorKey.currentContext!.findRenderObject() as RenderBox?;
-        _editorOffset = box?.localToGlobal(Offset.zero);
-        if (_editorOffset != null) {
-          var fixedOffset = _editorOffset!;
-          fixedOffset += Offset(0, _codeScroll!.offset);
-          _editorOffset = fixedOffset;
-        }
-      }
+            if (_codeScroll != null && _editorKey.currentContext != null) {
+              final box = _editorKey.currentContext!
+                  .findRenderObject() as RenderBox?;
+              _editorOffset = box?.localToGlobal(Offset.zero);
+              if (_editorOffset != null) {
+                var fixedOffset = _editorOffset!;
+                fixedOffset += Offset(0, _codeScroll!.offset);
+                _editorOffset = fixedOffset;
+              }
+            }
 
-      rebuild();
-    });
+            rebuild();
+          });
+    }
   }
 
   // Wrap the codeField in a horizontal scrollView

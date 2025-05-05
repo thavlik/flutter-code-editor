@@ -96,6 +96,10 @@ class CodeController extends TextEditingController {
   /// still be possible.
   final bool readOnly;
 
+  /// When folding is disable in the [GutterStyle], we should let the controller
+  /// know so it doesn't do unnecessary calculations
+  final bool enableFolding;
+
   String get languageId => _languageId;
 
   Code _code;
@@ -160,6 +164,7 @@ class CodeController extends TextEditingController {
     this.analysisResult = const AnalysisResult(issues: []),
     this.patternMap,
     this.readOnly = false,
+    this.enableFolding = false,
     this.params = const EditorParams(),
     this.modifiers = defaultCodeModifiers,
   })  : _analyzer = analyzer,
