@@ -378,14 +378,16 @@ class _CodeFieldState extends State<CodeField> {
       ),
     );
 
-    return SingleChildScrollView(
-      padding: EdgeInsets.only(
-        right: widget.padding.right,
-      ),
-      scrollDirection: Axis.horizontal,
-      controller: _horizontalCodeScroll,
-      child: intrinsic,
-    );
+    return widget.wrap
+        ? intrinsic
+        : SingleChildScrollView(
+            padding: EdgeInsets.only(
+              right: widget.padding.right,
+            ),
+            scrollDirection: Axis.horizontal,
+            controller: _horizontalCodeScroll,
+            child: intrinsic,
+          );
   }
 
   @override
@@ -537,7 +539,7 @@ class _CodeFieldState extends State<CodeField> {
     return max(
       _getCaretOffset(textPainter).dx +
           widget.padding.left -
-          _horizontalCodeScroll!.offset +
+          // _horizontalCodeScroll!.offset +
           (_editorOffset?.dx ?? 0),
       0,
     );
