@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -171,13 +172,11 @@ class CodeField extends StatefulWidget {
   final Decoration? decoration;
   final TextSelectionThemeData? textSelectionTheme;
   final FocusNode? focusNode;
-
-  @Deprecated('Use gutterStyle instead')
-  final bool? lineNumbers;
+  bool? lineNumbers;
 
   final GutterStyle gutterStyle;
 
-  const CodeField({
+  CodeField({
     super.key,
     required this.controller,
     this.minLines,
@@ -206,7 +205,11 @@ class CodeField extends StatefulWidget {
             'Can not provide gutterStyle and lineNumbers at the same time. '
             'Please use gutterStyle and provide necessary columns to show/hide'),
         gutterStyle = gutterStyle ??
-            ((lineNumbers == false) ? GutterStyle.none : lineNumberStyle);
+            ((lineNumbers == false) ? GutterStyle.none : lineNumberStyle) {
+    if (gutterStyle?.showLineNumbers != null) {
+      lineNumbers = gutterStyle!.showLineNumbers;
+    }
+  }
 
   @override
   State<CodeField> createState() => _CodeFieldState();
@@ -237,6 +240,14 @@ class _CodeFieldState extends State<CodeField> {
   final _editorKey = GlobalKey();
   Offset? _editorOffset;
 
+  bool get _lineNumbersEnabled =>
+      widget.lineNumbers ?? widget.gutterStyle.showLineNumbers;
+  bool get _popupEnabled =>
+      widget.controller.popupController.shouldShow && windowSize != null;
+  Timer? _lineNumberDebouncer;
+  Timer? _popupDebouncer;
+  int debounceTimeMillis = 300;
+
   @override
   void initState() {
     super.initState();
@@ -244,9 +255,13 @@ class _CodeFieldState extends State<CodeField> {
     _numberScroll = _controllers?.addAndGet();
     _codeScroll = _controllers?.addAndGet();
 
-    widget.controller.addListener(_onTextChanged);
-    widget.controller.addListener(_updatePopupOffset);
-    widget.controller.popupController.addListener(_onPopupStateChanged);
+    if (_lineNumbersEnabled) {
+      widget.controller.addListener(_onTextChanged);
+    }
+    if (_popupEnabled) {
+      widget.controller.addListener(_updatePopupOffset);
+      widget.controller.popupController.addListener(_onPopupStateChanged);
+    }
     widget.controller.searchController.addListener(
       _onSearchControllerChange,
     );
@@ -275,9 +290,14 @@ class _CodeFieldState extends State<CodeField> {
   @override
   void dispose() {
     widget.controller.searchController.codeFieldFocusNode = null;
-    widget.controller.removeListener(_onTextChanged);
-    widget.controller.removeListener(_updatePopupOffset);
-    widget.controller.popupController.removeListener(_onPopupStateChanged);
+    if (_lineNumbersEnabled) {
+      widget.controller.removeListener(_onTextChanged);
+    }
+    if (_popupEnabled) {
+      widget.controller.removeListener(_updatePopupOffset);
+      widget.controller.popupController.removeListener(_onPopupStateChanged);
+    }
+
     _suggestionsPopup?.remove();
     widget.controller.searchController.removeListener(
       _onSearchControllerChange,
@@ -293,17 +313,26 @@ class _CodeFieldState extends State<CodeField> {
   @override
   void didUpdateWidget(covariant CodeField oldWidget) {
     super.didUpdateWidget(oldWidget);
-    oldWidget.controller.removeListener(_onTextChanged);
-    oldWidget.controller.removeListener(_updatePopupOffset);
-    oldWidget.controller.popupController.removeListener(_onPopupStateChanged);
+
+    if (_lineNumbersEnabled) {
+      oldWidget.controller.removeListener(_onTextChanged);
+    }
+    if (_popupEnabled) {
+      oldWidget.controller.removeListener(_updatePopupOffset);
+      oldWidget.controller.popupController.removeListener(_onPopupStateChanged);
+    }
     oldWidget.controller.searchController.removeListener(
       _onSearchControllerChange,
     );
 
     widget.controller.searchController.codeFieldFocusNode = _focusNode;
-    widget.controller.addListener(_onTextChanged);
-    widget.controller.addListener(_updatePopupOffset);
-    widget.controller.popupController.addListener(_onPopupStateChanged);
+    if (_lineNumbersEnabled) {
+      widget.controller.addListener(_onTextChanged);
+    }
+    if (_popupEnabled) {
+      widget.controller.addListener(_updatePopupOffset);
+      widget.controller.popupController.addListener(_onPopupStateChanged);
+    }
     widget.controller.searchController.addListener(
       _onSearchControllerChange,
     );
@@ -325,31 +354,34 @@ class _CodeFieldState extends State<CodeField> {
   }
 
   void _onTextChanged() {
-    // Rebuild line number
-    final str = widget.controller.text.split('\n');
-    final buf = <String>[];
+    _lineNumberDebouncer?.cancel();
+    _lineNumberDebouncer = Timer(Duration(milliseconds: debounceTimeMillis), () {
+      // Rebuild line number
+      final str = widget.controller.text.split('\n');
+      final buf = <String>[];
 
-    for (var k = 0; k < str.length; k++) {
-      buf.add((k + 1).toString());
-    }
-
-    // Find longest line
-    longestLine = '';
-    widget.controller.text.split('\n').forEach((line) {
-      if (line.length > longestLine.length) longestLine = line;
-    });
-
-    if (_codeScroll != null && _editorKey.currentContext != null) {
-      final box = _editorKey.currentContext!.findRenderObject() as RenderBox?;
-      _editorOffset = box?.localToGlobal(Offset.zero);
-      if (_editorOffset != null) {
-        var fixedOffset = _editorOffset!;
-        fixedOffset += Offset(0, _codeScroll!.offset);
-        _editorOffset = fixedOffset;
+      for (var k = 0; k < str.length; k++) {
+        buf.add((k + 1).toString());
       }
-    }
 
-    rebuild();
+      // Find longest line
+      longestLine = '';
+      widget.controller.text.split('\n').forEach((line) {
+        if (line.length > longestLine.length) longestLine = line;
+      });
+
+      if (_codeScroll != null && _editorKey.currentContext != null) {
+        final box = _editorKey.currentContext!.findRenderObject() as RenderBox?;
+        _editorOffset = box?.localToGlobal(Offset.zero);
+        if (_editorOffset != null) {
+          var fixedOffset = _editorOffset!;
+          fixedOffset += Offset(0, _codeScroll!.offset);
+          _editorOffset = fixedOffset;
+        }
+      }
+
+      rebuild();
+    });
   }
 
   // Wrap the codeField in a horizontal scrollView
@@ -499,17 +531,20 @@ class _CodeFieldState extends State<CodeField> {
   }
 
   void _updatePopupOffset() {
-    final textPainter = _getTextPainter(widget.controller.text);
-    final caretHeight = _getCaretHeight(textPainter);
+    _popupDebouncer?.cancel();
+    _popupDebouncer = Timer(Duration(milliseconds: debounceTimeMillis), () {
+      final textPainter = _getTextPainter(widget.controller.text);
+      final caretHeight = _getCaretHeight(textPainter);
 
-    final leftOffset = _getPopupLeftOffset(textPainter);
-    final normalTopOffset = _getPopupTopOffset(textPainter, caretHeight);
-    final flippedTopOffset = normalTopOffset -
-        (Sizes.autocompletePopupMaxHeight + caretHeight + Sizes.caretPadding);
+      final leftOffset = _getPopupLeftOffset(textPainter);
+      final normalTopOffset = _getPopupTopOffset(textPainter, caretHeight);
+      final flippedTopOffset = normalTopOffset -
+      (Sizes.autocompletePopupMaxHeight + caretHeight + Sizes.caretPadding);
 
-    setState(() {
-      _normalPopupOffset = Offset(leftOffset, normalTopOffset);
-      _flippedPopupOffset = Offset(leftOffset, flippedTopOffset);
+      setState(() {
+        _normalPopupOffset = Offset(leftOffset, normalTopOffset);
+        _flippedPopupOffset = Offset(leftOffset, flippedTopOffset);
+      });
     });
   }
 
