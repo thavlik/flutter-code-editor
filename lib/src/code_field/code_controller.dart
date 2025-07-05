@@ -91,6 +91,9 @@ class CodeController extends TextEditingController {
   ///If it is not empty, all another code except specified will be hidden.
   Set<String> _visibleSectionNames = {};
 
+  /// thavlik: Patch to support foldable sections in custom languages.
+  final List<String>? _singleLineComments;
+
   /// Makes the text un-editable, but allows to set the full text.
   /// Focusing and moving the selection inside of a [CodeField] will
   /// still be possible.
@@ -162,9 +165,11 @@ class CodeController extends TextEditingController {
     this.readOnly = false,
     this.params = const EditorParams(),
     this.modifiers = defaultCodeModifiers,
+    List<String>? singleLineComments,
   })  : _analyzer = analyzer,
         _readOnlySectionNames = readOnlySectionNames,
         _code = Code.empty,
+        _singleLineComments = singleLineComments,
         _isTabReplacementEnabled = modifiers.any((e) => e is TabModifier) {
     setLanguage(language, analyzer: analyzer);
     this.visibleSectionNames = visibleSectionNames;
@@ -796,6 +801,7 @@ class CodeController extends TextEditingController {
       namedSectionParser: namedSectionParser,
       readOnlySectionNames: _readOnlySectionNames,
       visibleSectionNames: _visibleSectionNames,
+      singleLineComments: _singleLineComments,
     );
   }
 

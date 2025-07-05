@@ -52,8 +52,9 @@ class Code {
     AbstractNamedSectionParser? namedSectionParser,
     Set<String> readOnlySectionNames = const {},
     Set<String> visibleSectionNames = const {},
+    List<String>? singleLineComments,
   }) {
-    final sequences = SingleLineComments.byMode[language] ?? [];
+    final sequences = singleLineComments ?? SingleLineComments.byMode[language] ?? [];
 
     final commentParser = SingleLineCommentParser.parseHighlighted(
       text: text,
