@@ -9,6 +9,7 @@ import '../code_field/text_editing_value.dart';
 import '../folding/foldable_block.dart';
 import '../folding/foldable_block_matcher.dart';
 import '../folding/invalid_foldable_block.dart';
+import '../folding/parsers/java.dart';
 import '../folding/parsers/parser_factory.dart';
 import '../hidden_ranges/hidden_line_ranges.dart';
 import '../hidden_ranges/hidden_line_ranges_builder.dart';
@@ -80,7 +81,7 @@ class Code {
     if (highlighted == null || language == null) {
       foldableBlocks = const [];
     } else {
-      final parser = FoldableBlockParserFactory.provideParser(language);
+      final parser = JavaFoldableBlockParser();
 
       parser.parse(
         highlighted: highlighted,
