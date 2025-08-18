@@ -466,9 +466,9 @@ class _CodeFieldState extends State<CodeField> {
       decoration: const InputDecoration(
         isCollapsed: true,
         contentPadding: EdgeInsets.symmetric(vertical: 16),
-        disabledBorder: InputBorder.none,
-        border: InputBorder.none,
-        focusedBorder: InputBorder.none,
+        //disabledBorder: InputBorder.none,
+        //border: InputBorder.none,
+        //focusedBorder: InputBorder.none,
       ),
       cursorColor: widget.cursorColor ?? defaultTextStyle.color,
       autocorrect: false,
