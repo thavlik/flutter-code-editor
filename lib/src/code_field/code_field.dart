@@ -140,6 +140,9 @@ class CodeField extends StatefulWidget {
   @Deprecated('Use gutterStyle instead')
   final GutterStyle lineNumberStyle;
 
+  /// {@macro flutter.widgets.textField.decoration}
+  final InputDecoration inputDecoration;
+
   /// {@macro flutter.widgets.textField.cursorColor}
   final Color? cursorColor;
 
@@ -186,6 +189,10 @@ class CodeField extends StatefulWidget {
     this.background,
     this.decoration,
     this.textStyle,
+    this.inputDecoration = const InputDecoration(
+      isCollapsed: true,
+      contentPadding: EdgeInsets.all(16.0),
+    ),
     this.smartDashesType = SmartDashesType.disabled,
     this.smartQuotesType = SmartQuotesType.disabled,
     this.padding = EdgeInsets.zero,
@@ -463,13 +470,7 @@ class _CodeFieldState extends State<CodeField> {
       maxLines: widget.maxLines,
       expands: widget.expands,
       scrollController: _codeScroll,
-      decoration: const InputDecoration(
-        isCollapsed: true,
-        contentPadding: EdgeInsets.symmetric(vertical: 16),
-        //disabledBorder: InputBorder.none,
-        //border: InputBorder.none,
-        //focusedBorder: InputBorder.none,
-      ),
+      decoration: widget.inputDecoration,
       cursorColor: widget.cursorColor ?? defaultTextStyle.color,
       autocorrect: false,
       enableSuggestions: false,
@@ -497,7 +498,6 @@ class _CodeFieldState extends State<CodeField> {
         decoration: widget.decoration,
         color: _backgroundCol,
         key: _codeFieldKey,
-        padding: const EdgeInsets.only(left: 8),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
